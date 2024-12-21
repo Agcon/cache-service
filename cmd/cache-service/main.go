@@ -3,6 +3,7 @@ package main
 import (
 	"cache_service/config"
 	"cache_service/internal/cache"
+	"cache_service/internal/logger"
 	"cache_service/internal/server"
 	"log"
 	"net/http"
@@ -14,12 +15,18 @@ func main() {
 		log.Fatalf("failed to load configuration: %v", err)
 	}
 
+	logg := logger.NewLogger(cfg.LogLevel)
+
 	cacheInstance := cache.NewLRUCache(cfg.CacheSize, cfg.DefaultCacheTTL)
 
-	r := server.NewServer(cacheInstance)
+	r := server.NewServer(cacheInstance, logg)
 
-	log.Printf("Starting server on %s with log level %s", cfg.ServerHostPort, cfg.LogLevel)
+	logg.Info("Starting server",
+		"host", cfg.ServerHostPort,
+		"log_level", cfg.LogLevel,
+	)
+
 	if err := http.ListenAndServe(cfg.ServerHostPort, r); err != nil {
-		log.Fatalf("Server failed to start: %v", err)
+		logg.Error("Server failed to start", "error", err)
 	}
 }
