@@ -5,6 +5,13 @@ import (
 	"os"
 )
 
+// NewLogger создаёт новый экземпляр структурированного логгера.
+//
+// Параметры:
+// - level: строковый уровень логирования (DEBUG, INFO, WARN, ERROR).
+//
+// Возвращает:
+// - Экземпляр логгера slog.
 func NewLogger(level string) *slog.Logger {
 	var lvl slog.Level
 	switch level {

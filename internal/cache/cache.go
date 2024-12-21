@@ -7,32 +7,38 @@ import (
 	"time"
 )
 
+// Ошибки, которые могут возникнуть при работе с кешем
 var (
-	errEmptyKey    = errors.New("key cannot be empty")
-	errNegativeTTL = errors.New("ttl cannot be negative")
-	errKeyNotFound = errors.New("key not found")
-	errExpiredKey  = errors.New("key expired")
-	errNilNode     = errors.New("node is nil")
-	errEmptyCache  = errors.New("cache is empty")
+	errEmptyKey    = errors.New("key cannot be empty")    // Ошибка для пустого ключа
+	errNegativeTTL = errors.New("ttl cannot be negative") // Ошибка для отрицательного TTL
+	errKeyNotFound = errors.New("key not found")          // Ошибка для отсутствующего ключа
+	errExpiredKey  = errors.New("key expired")            // Ошибка для истекшего ключа
+	errNilNode     = errors.New("node is nil")            // Ошибка для пустого узла
+	errEmptyCache  = errors.New("cache is empty")         // Ошибка для пустого кеша
 )
 
+// Node представляет собой элемент в кеше, содержащий ключ, значение, время жизни (TTL),
+// а также ссылки на предыдущий и следующий элементы в двусвязном списке.
 type Node struct {
-	key   string
-	value interface{}
-	TTL   time.Time
-	prev  *Node
-	next  *Node
+	key   string      // Ключ элемента в кеше
+	value interface{} // Значение элемента
+	TTL   time.Time   // Время истечения срока жизни элемента
+	prev  *Node       // Указатель на предыдущий элемент в списке
+	next  *Node       // Указатель на следующий элемент в списке
 }
 
+// LRUCache представляет собой структуру кеша с алгоритмом LRU, поддерживающего TTL для элементов.
 type LRUCache struct {
-	head       *Node
-	tail       *Node
-	cache      map[string]*Node
-	capacity   int
-	defaultTTL time.Duration
-	mutex      sync.RWMutex
+	head       *Node            // Указатель на первый элемент в списке
+	tail       *Node            // Указатель на последний элемент в списке
+	cache      map[string]*Node // Карта для хранения элементов кеша по ключу
+	capacity   int              // Максимальная ёмкость кеша
+	defaultTTL time.Duration    // Значение по умолчанию для TTL
+	mutex      sync.RWMutex     // Мьютекс для безопасного доступа к кешу
 }
 
+// NewLRUCache создает новый LRU кеш с заданной емкостью и значением по умолчанию для TTL.
+// Возвращает указатель на новый объект LRUCache.
 func NewLRUCache(capacity int, defaultTTL time.Duration) *LRUCache {
 	return &LRUCache{
 		cache:      make(map[string]*Node),
@@ -41,6 +47,7 @@ func NewLRUCache(capacity int, defaultTTL time.Duration) *LRUCache {
 	}
 }
 
+// addNode добавляет новый узел в начало списка.
 func (c *LRUCache) addNode(node *Node) {
 	node.next = c.head
 	if c.head != nil {
@@ -52,11 +59,13 @@ func (c *LRUCache) addNode(node *Node) {
 	}
 }
 
+// moveToHead перемещает указанный узел в начало списка (в начало списка недавно использованных элементов).
 func (c *LRUCache) moveToHead(node *Node) {
 	c.removeNode(node)
 	c.addNode(node)
 }
 
+// removeNode удаляет узел из списка.
 func (c *LRUCache) removeNode(node *Node) {
 	if node.prev != nil {
 		node.prev.next = node.next
@@ -71,6 +80,9 @@ func (c *LRUCache) removeNode(node *Node) {
 	}
 }
 
+// Put добавляет новый элемент в кеш с заданным ключом, значением и TTL.
+// Если элемент с таким ключом уже существует, его значение обновляется и TTL сбрасывается.
+// Если кеш переполнен, удаляется наименее недавно использованный элемент.
 func (c *LRUCache) Put(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -112,6 +124,8 @@ func (c *LRUCache) Put(ctx context.Context, key string, value interface{}, ttl t
 	return nil
 }
 
+// Get возвращает значение по ключу из кеша. Также возвращается время истечения срока жизни элемента (TTL).
+// Если элемент не найден или его TTL истек, возвращается ошибка.
 func (c *LRUCache) Get(ctx context.Context, key string) (value interface{}, expiresAt time.Time, err error) {
 	if err := ctx.Err(); err != nil {
 		return nil, time.Time{}, err
@@ -141,6 +155,7 @@ func (c *LRUCache) Get(ctx context.Context, key string) (value interface{}, expi
 	return node.value, node.TTL, nil
 }
 
+// GetAll возвращает все ключи и значения из кеша.
 func (c *LRUCache) GetAll(ctx context.Context) (keys []string, values []interface{}, err error) {
 	if err := ctx.Err(); err != nil {
 		return nil, nil, err
@@ -165,6 +180,8 @@ func (c *LRUCache) GetAll(ctx context.Context) (keys []string, values []interfac
 	return keys, values, nil
 }
 
+// Evict удаляет элемент из кеша по ключу и возвращает его значение.
+// Если элемент не найден, возвращается ошибка.
 func (c *LRUCache) Evict(ctx context.Context, key string) (value interface{}, err error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -191,6 +208,7 @@ func (c *LRUCache) Evict(ctx context.Context, key string) (value interface{}, er
 	return node.value, nil
 }
 
+// EvictAll очищает весь кеш.
 func (c *LRUCache) EvictAll(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -208,6 +226,7 @@ func (c *LRUCache) EvictAll(ctx context.Context) error {
 	return nil
 }
 
+// getTTL возвращает TTL для элемента. Если TTL равен 0, используется значение по умолчанию.
 func (c *LRUCache) getTTL(ttl time.Duration) time.Duration {
 	if ttl == 0 {
 		return c.defaultTTL

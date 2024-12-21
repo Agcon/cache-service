@@ -7,6 +7,20 @@ import (
 	"time"
 )
 
+// CreateLRUHandler обрабатывает POST-запрос на добавление элемента в кэш.
+//
+// Метод:
+// - POST /api/lru
+//
+// Тело запроса (JSON):
+// - key (string): Ключ элемента.
+// - value (interface{}): Значение элемента.
+// - ttl_seconds (int, optional): Время жизни элемента в секундах.
+//
+// Ответы:
+// - 201 Created: Элемент успешно добавлен.
+// - 400 Bad Request: Некорректный запрос.
+// - 500 Internal Server Error: Ошибка сервера.
 func (s *Server) CreateLRUHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	s.log.Info("Processing request", "method", r.Method, "path", r.URL.Path)
@@ -39,6 +53,18 @@ func (s *Server) CreateLRUHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
+// GetLRUHandler обрабатывает GET-запрос на получение элемента по ключу.
+//
+// Метод:
+// - GET /api/lru/{key}
+//
+// Параметры пути:
+// - key (string): Ключ элемента.
+//
+// Ответы:
+// - 200 OK: Успешный ответ с данными элемента.
+// - 404 Not Found: Ключ не найден или истёк срок действия.
+// - 500 Internal Server Error: Ошибка сервера.
 func (s *Server) GetLRUHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	s.log.Info("Processing request", "method", r.Method, "path", r.URL.Path)
@@ -74,6 +100,15 @@ func (s *Server) GetLRUHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetAllLRUHandler обрабатывает GET-запрос на получение всех элементов из кэша.
+//
+// Метод:
+// - GET /api/lru
+//
+// Ответы:
+// - 200 OK: Успешный ответ с данными всех элементов.
+// - 204 No Content: Кэш пуст.
+// - 500 Internal Server Error: Ошибка сервера.
 func (s *Server) GetAllLRUHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	s.log.Info("Processing request", "method", r.Method, "path", r.URL.Path)
@@ -107,6 +142,18 @@ func (s *Server) GetAllLRUHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// DeleteLRUHandler обрабатывает DELETE-запрос на удаление элемента по ключу.
+//
+// Метод:
+// - DELETE /api/lru/{key}
+//
+// Параметры пути:
+// - key (string): Ключ элемента.
+//
+// Ответы:
+// - 204 No Content: Элемент успешно удалён.
+// - 404 Not Found: Ключ не найден.
+// - 500 Internal Server Error: Ошибка сервера.
 func (s *Server) DeleteLRUHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	s.log.Info("Processing request", "method", r.Method, "path", r.URL.Path)
@@ -127,6 +174,14 @@ func (s *Server) DeleteLRUHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// DeleteAllLRUHandler обрабатывает DELETE-запрос на удаление всех элементов из кэша.
+//
+// Метод:
+// - DELETE /api/lru
+//
+// Ответы:
+// - 204 No Content: Все элементы успешно удалены.
+// - 500 Internal Server Error: Ошибка сервера.
 func (s *Server) DeleteAllLRUHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	s.log.Info("Processing request", "method", r.Method, "path", r.URL.Path)
