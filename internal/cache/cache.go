@@ -78,12 +78,18 @@ func (c *LRUCache) removeNode(node *Node) {
 	} else {
 		c.tail = node.prev
 	}
+	node.prev = nil
+	node.next = nil
 }
 
 // Put добавляет новый элемент в кеш с заданным ключом, значением и TTL.
 // Если элемент с таким ключом уже существует, его значение обновляется и TTL сбрасывается.
 // Если кеш переполнен, удаляется наименее недавно использованный элемент.
 func (c *LRUCache) Put(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -168,13 +174,21 @@ func (c *LRUCache) GetAll(ctx context.Context) (keys []string, values []interfac
 		return nil, nil, errEmptyCache
 	}
 
-	for node := c.head; node != nil; node = node.next {
+	now := time.Now()
+	for node := c.head; node != nil; {
+		next := node.next
 		select {
 		case <-ctx.Done():
 			return nil, nil, ctx.Err()
 		default:
-			keys = append(keys, node.key)
-			values = append(values, node.value)
+			if now.After(node.TTL) {
+				delete(c.cache, node.key)
+				c.removeNode(node)
+			} else {
+				keys = append(keys, node.key)
+				values = append(values, node.value)
+			}
+			node = next
 		}
 	}
 	return keys, values, nil

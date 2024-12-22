@@ -12,11 +12,17 @@ import (
 	"cache_service/internal/cache"
 	"cache_service/internal/logger"
 	"cache_service/internal/server"
+	"github.com/joho/godotenv"
 	"log"
 	"net/http"
 )
 
 func main() {
+	// Загружаем переменные окружения из файла .env
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found, using system environment variables")
+	}
+
 	// Загружаем конфигурацию
 	cfg, err := config.LoadConfig()
 	if err != nil {
